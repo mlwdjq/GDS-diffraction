@@ -283,6 +283,7 @@ function run_Callback(hObject, eventdata, handles)
 %read GDS
 if get(hObject,'Value')==0
     set(hObject,'String','Run');
+    return;
 else
     set(hObject,'String','Stop');
 end
@@ -322,7 +323,7 @@ if num~=length(s2)
     set(handles.run,'String','run');
     return;
 end
-
+tic;
 % --  Exposure tool information
 wavl = str2double(get(handles.waveLength,'String'));
 nrd = str2double(get(handles.fieldSampling,'String'));
@@ -330,13 +331,13 @@ offsetAngle = str2double(get(handles.uieAngle,'String'))*pi/180;
 azimuth = str2double(get(handles.uieAzimuth,'String'))*pi/180;
 propdis_nm=str2double(get(handles.distance,'String'))*1e6.*cos(offsetAngle);
 defocus_mm = str2double(get(handles.uieDefocus,'String')).*cos(offsetAngle);
-x0_nm = defocus_mm*1e6*tan(offsetAngle)*sin(azimuth);
-y0_nm = defocus_mm*1e6*tan(offsetAngle)*cos(azimuth);
+x0_nm = defocus_mm*1e6*tan(offsetAngle)*cos(azimuth);
+y0_nm = defocus_mm*1e6*tan(offsetAngle)*sin(azimuth);
 sph = @(x,y)(2*pi/wavl*sign(defocus_mm)*sqrt((x-x0_nm).^2+(y-y0_nm).^2+(defocus_mm*1e6).^2)); % point source illumination
-xLeft= str2double(get(handles.xLeft,'String'))-propdis_nm/1e3*tan(offsetAngle)*sin(azimuth);
-xRight= str2double(get(handles.xRight,'String'))-propdis_nm/1e3*tan(offsetAngle)*sin(azimuth);
-yLeft= str2double(get(handles.yLeft,'String'))-propdis_nm/1e3*tan(offsetAngle);
-yRight= str2double(get(handles.yRight,'String'))-propdis_nm/1e3*tan(offsetAngle);
+xLeft= str2double(get(handles.xLeft,'String'))-propdis_nm/1e3*tan(offsetAngle)*cos(azimuth);
+xRight= str2double(get(handles.xRight,'String'))-propdis_nm/1e3*tan(offsetAngle)*cos(azimuth);
+yLeft= str2double(get(handles.yLeft,'String'))-propdis_nm/1e3*tan(offsetAngle)*sin(azimuth);
+yRight= str2double(get(handles.yRight,'String'))-propdis_nm/1e3*tan(offsetAngle)*sin(azimuth);
 xc=linspace(sin(atan(xLeft/propdis_nm*1000)),sin(atan(xRight/propdis_nm*1000)),2*nrd-1)/wavl;
 yc=linspace(sin(atan(yLeft/propdis_nm*1000)),sin(atan(yRight/propdis_nm*1000)),2*nrd-1)/wavl;
 [nyux,nyuy]=meshgrid(xc,yc);
@@ -353,6 +354,7 @@ for j=1:num
     x0=mean(xs);
     y0=mean(ys);
     polyg(end).phase=pi/(wavl)/propdis_nm*(x0^2+y0^2)+sph(x0,y0);
+%     figure(2),plot3(x0,y0,sph(x0,y0),'.'),hold on;
 end
  
 % Forces all polygons to be defined in a CW orientation
@@ -388,6 +390,7 @@ xlabel(handles.pupilAmp,'x/um'),ylabel(handles.pupilAmp,'y/um');title(handles.pu
 imagesc(handles.pupilPhase,xp_um,yp_um,pupilPha); colorbar(handles.pupilPhase);
 xlabel(handles.pupilPhase,'x/um'),ylabel(handles.pupilPhase,'y/um');title(handles.pupilPhase,'Pupil phase');
 set(hObject,'String','Run','Value',0);
+fprintf('Propagation took %0.1fs\n',toc);
 
 function p_amp = polyProp(polyg,backg,nrd,nyux,nyuy,handles) 
 % Function M-file polyFFT.m
