@@ -345,17 +345,17 @@ yc=linspace(sin(atan(yLeft/propdis_nm*1000)),sin(atan(yRight/propdis_nm*1000)),2
 [nyux,nyuy]=meshgrid(xc,yc); % frequency coordinates
 norm_flag = 1 ; % 1: Normalize the intensity, 0: Unnormalize the intensity
 %% create polygon structs
-polyg(num,1)=struct('xy',[],'tx',[],'phase',[]);
+polyg=[];
 backg.int=0;
 backg.phase=0;
 for j=1:num
     xs=gds((s1(j)+5):2:(s2(j)-3))/10; % from A to nm
     ys=gds((s1(j)+6):2:(s2(j)-3))/10;
-    polyg(j).xy =[xs'*cos(offsetAngle);ys'];
-    polyg(j).tx = 1;
+    polyg(end+1).xy =[xs'*cos(offsetAngle);ys'];
+    polyg(end).tx = 1;
     x0=mean(xs);
     y0=mean(ys);
-    polyg(j).phase=pi/(wavl)/(propdis_nm-...
+    polyg(end).phase=pi/(wavl)/(propdis_nm-...
         (x0*cos(azimuth)+y0*sin(azimuth))*tan(offsetAngle))*(x0^2+y0^2)+sph(x0,y0);
 %     figure(2),plot3(x0,y0,sph(x0,y0),'.'),hold on;
 end
