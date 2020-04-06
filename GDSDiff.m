@@ -22,7 +22,7 @@ function varargout = GDSDiff(varargin)
 
 % Edit the above text to modify the response to help GDSDiff
 
-% Last Modified by GUIDE v2.5 30-Mar-2020 17:56:32
+% Last Modified by GUIDE v2.5 06-Apr-2020 16:07:26
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -386,13 +386,20 @@ xp_um = dpx_um*[-nrd:nrd];
 yp_um = dpy_um*[-nrd:nrd];
 imagesc(handles.outputField,x_um,y_um,fieldAmp); colorbar(handles.outputField);
 xlabel(handles.outputField,'x/um'),ylabel(handles.outputField,'y/um');title(handles.outputField,'Field amplitude');
-imagesc(handles.outputPhase,x_um,y_um,fieldPha); colorbar(handles.outputPhase);
+imagesc(handles.outputPhase,x_um,y_um,fieldPha/2/pi); colorbar(handles.outputPhase);
 xlabel(handles.outputPhase,'x/um'),ylabel(handles.outputPhase,'y/um');title(handles.outputPhase,'Field phase');
 imagesc(handles.pupilAmp,xp_um,yp_um,pupilAmp); colorbar(handles.pupilAmp);
 xlabel(handles.pupilAmp,'x/um'),ylabel(handles.pupilAmp,'y/um');title(handles.pupilAmp,'Pupil amplitude');
-imagesc(handles.pupilPhase,xp_um,yp_um,pupilPha); colorbar(handles.pupilPhase);
+imagesc(handles.pupilPhase,xp_um,yp_um,pupilPha/2/pi); colorbar(handles.pupilPhase);
 xlabel(handles.pupilPhase,'x/um'),ylabel(handles.pupilPhase,'y/um');title(handles.pupilPhase,'Pupil phase');
 set(hObject,'String','Run','Value',0);
+setappdata(gcf,'field',diff_amp);
+setappdata(gcf,'pupil',pupil);
+setappdata(gcf,'pupilPha',pupilPha);
+setappdata(gcf,'x_um',x_um);
+setappdata(gcf,'y_um',y_um);
+setappdata(gcf,'xp_um',xp_um);
+setappdata(gcf,'yp_um',yp_um);
 fprintf('Propagation took %0.1fs\n',toc);
 
 function p_amp = polyProp(polyg,backg,nrd,nyux,nyuy,handles) 
@@ -947,3 +954,92 @@ function uieAzimuth_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in uibPupilMask.
+function uibPupilMask_Callback(hObject, eventdata, handles)
+% hObject    handle to uibPupilMask (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global mask
+pupil = getappdata(gcf,'pupil');
+pupilAmp = abs(pupil);
+mask = ones(size(pupil));
+mask(pupilAmp<max(pupilAmp(:))/10) = 0;
+xp_um = setappdata(gcf,'xp_um');
+yp_um = setappdata(gcf,'yp_um');
+imagesc(handles.pupilAmp,xp_um,yp_um,mask); colorbar(handles.pupilAmp);
+xlabel(handles.pupilAmp,'x/um'),ylabel(handles.pupilAmp,'y/um');title(handles.pupilAmp,'Pupil mask');
+% Hint: get(hObject,'Value') returns toggle state of uibPupilMask
+
+
+% --- Executes on button press in uicbRemoveTilt.
+function uicbRemoveTilt_Callback(hObject, eventdata, handles)
+% hObject    handle to uicbRemoveTilt (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of uicbRemoveTilt
+
+
+% --- Executes on button press in uicbRemoveDef.
+function uicbRemoveDef_Callback(hObject, eventdata, handles)
+% hObject    handle to uicbRemoveDef (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of uicbRemoveDef
+
+
+% --- Executes on button press in uicbUnwrapPhase.
+function uicbUnwrapPhase_Callback(hObject, eventdata, handles)
+% hObject    handle to uicbUnwrapPhase (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of uicbUnwrapPhase
+
+
+% --- Executes on button press in uibLoadMask.
+function uibLoadMask_Callback(hObject, eventdata, handles)
+% hObject    handle to uibLoadMask (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global mask
+[fn,pn]=uigetfile({'*.mat','Pupil mask (*.mat)'},'Loading','data\mask');
+fileformat=fn(end-2:end);
+filename= strcat(pn,fn);
+switch fileformat
+    case 'mat'
+        load(filename);
+end
+
+
+% --- Executes on button press in uibAnalyze.
+function uibAnalyze_Callback(hObject, eventdata, handles)
+% hObject    handle to uibAnalyze (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global mask
+pupil = getappdata(gcf,'pupil');
+pupilAmp = abs(pupil);
+pupilPha = getappdata(gcf,'pupilPha');
+xp_um = setappdata(gcf,'xp_um');
+yp_um = setappdata(gcf,'yp_um');
+if length(mask)~=length(pupil)
+    mask = ones(length(pupil));
+end
+if get(handles.uicbUnwrapPhase,'Value')
+    pupilPha = GDS.utils.UnwrapPhaseBySortingReliabilityWithMask(pupilPha,mask*255);
+end
+pupilPha(mask==0) = NaN;
+if get(handles.uicbRemoveTilt,'Value')
+    pupilPha = GDS.utils.DelTilt(pupilPha);
+end
+if get(handles.uicbRemoveDef,'Value')
+    pupilPha = GDS.utils.DelDefocus(pupilPha);
+end
+imagesc(handles.pupilAmp,xp_um,yp_um,pupilAmp); colorbar(handles.pupilAmp);
+xlabel(handles.pupilAmp,'x/um'),ylabel(handles.pupilAmp,'y/um');title(handles.pupilAmp,'Pupil amplitude');
+imagesc(handles.pupilPhase,xp_um,yp_um,pupilPha/2/pi); colorbar(handles.pupilPhase);
+xlabel(handles.pupilPhase,'x/um'),ylabel(handles.pupilPhase,'y/um');title(handles.pupilPhase,'Pupil phase');
