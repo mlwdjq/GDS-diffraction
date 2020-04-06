@@ -1013,7 +1013,10 @@ switch fileformat
     case 'mat'
         load(filename);
 end
-
+xp_um = setappdata(gcf,'xp_um');
+yp_um = setappdata(gcf,'yp_um');
+imagesc(handles.pupilAmp,xp_um,yp_um,mask); colorbar(handles.pupilAmp);
+xlabel(handles.pupilAmp,'x/um'),ylabel(handles.pupilAmp,'y/um');title(handles.pupilAmp,'Pupil mask');
 
 % --- Executes on button press in uibAnalyze.
 function uibAnalyze_Callback(hObject, eventdata, handles)
