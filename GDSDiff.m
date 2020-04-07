@@ -22,7 +22,7 @@ function varargout = GDSDiff(varargin)
 
 % Edit the above text to modify the response to help GDSDiff
 
-% Last Modified by GUIDE v2.5 06-Apr-2020 16:07:26
+% Last Modified by GUIDE v2.5 07-Apr-2020 16:27:47
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -329,8 +329,8 @@ wavl = str2double(get(handles.waveLength,'String'));
 nrd = str2double(get(handles.fieldSampling,'String'));
 offsetAngle = str2double(get(handles.uieAngle,'String'))*pi/180;
 azimuth = str2double(get(handles.uieAzimuth,'String'))*pi/180;
-propdis_nm=str2double(get(handles.distance,'String'))*1e6.*cos(offsetAngle);
-defocus_mm = str2double(get(handles.uieDefocus,'String')).*cos(offsetAngle);
+propdis_nm=str2double(get(handles.distance,'String'))*1e6;
+defocus_mm = str2double(get(handles.uieDefocus,'String'));
 % x0_nm = defocus_mm*1e6*tan(offsetAngle)*cos(azimuth);
 % y0_nm = defocus_mm*1e6*tan(offsetAngle)*sin(azimuth);
 sph = @(x,y)(2*pi/wavl*sign(defocus_mm)*sqrt(x.^2+y.^2+...
@@ -1047,9 +1047,23 @@ end
 if get(handles.uicbRemoveDef,'Value')
     pupilPha = GDS.utils.DelDefocus(pupilPha);
 end
+if get(handles.uicbRemoveSph,'Value')
+    propdis_um=str2double(get(handles.distance,'String'))*1e3;
+    NA = sin(atan((max(xp_um)-min(xp_um))/2/propdis_um));
+    pupilPha = GDS.utils.removeSphere(pupilPha,NA,mask);
+end
 RMS = std(pupilPha(mask==1))/2/pi;
 set(handles.uitRMS,'String',num2str(RMS));
 imagesc(handles.pupilAmp,xp_um,yp_um,pupilAmp); colorbar(handles.pupilAmp);
 xlabel(handles.pupilAmp,'x/um'),ylabel(handles.pupilAmp,'y/um');title(handles.pupilAmp,'Pupil amplitude');
 imagesc(handles.pupilPhase,xp_um,yp_um,pupilPha/2/pi); colorbar(handles.pupilPhase);
 xlabel(handles.pupilPhase,'x/um'),ylabel(handles.pupilPhase,'y/um');title(handles.pupilPhase,'Pupil phase');
+
+
+% --- Executes on button press in uicbRemoveSph.
+function uicbRemoveSph_Callback(hObject, eventdata, handles)
+% hObject    handle to uicbRemoveSph (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of uicbRemoveSph
