@@ -966,8 +966,8 @@ pupil = getappdata(gcf,'pupil');
 pupilAmp = abs(pupil);
 mask = ones(size(pupil));
 mask(pupilAmp<max(pupilAmp(:))/10) = 0;
-xp_um = setappdata(gcf,'xp_um');
-yp_um = setappdata(gcf,'yp_um');
+xp_um = getappdata(gcf,'xp_um');
+yp_um = getappdata(gcf,'yp_um');
 imagesc(handles.pupilAmp,xp_um,yp_um,mask); colorbar(handles.pupilAmp);
 xlabel(handles.pupilAmp,'x/um'),ylabel(handles.pupilAmp,'y/um');title(handles.pupilAmp,'Pupil mask');
 % Hint: get(hObject,'Value') returns toggle state of uibPupilMask
@@ -1013,8 +1013,8 @@ switch fileformat
     case 'mat'
         load(filename);
 end
-xp_um = setappdata(gcf,'xp_um');
-yp_um = setappdata(gcf,'yp_um');
+xp_um = getappdata(gcf,'xp_um');
+yp_um = getappdata(gcf,'yp_um');
 imagesc(handles.pupilAmp,xp_um,yp_um,mask); colorbar(handles.pupilAmp);
 xlabel(handles.pupilAmp,'x/um'),ylabel(handles.pupilAmp,'y/um');title(handles.pupilAmp,'Pupil mask');
 
@@ -1027,8 +1027,8 @@ global mask
 pupil = getappdata(gcf,'pupil');
 pupilAmp = abs(pupil);
 pupilPha = getappdata(gcf,'pupilPha');
-xp_um = setappdata(gcf,'xp_um');
-yp_um = setappdata(gcf,'yp_um');
+xp_um = getappdata(gcf,'xp_um');
+yp_um = getappdata(gcf,'yp_um');
 if length(mask)~=length(pupil)
     mask = ones(length(pupil));
 end
@@ -1042,6 +1042,8 @@ end
 if get(handles.uicbRemoveDef,'Value')
     pupilPha = GDS.utils.DelDefocus(pupilPha);
 end
+RMS = std(pupilPha(mask==1));
+set(handles.uitRMS,'String',num2str(RMS));
 imagesc(handles.pupilAmp,xp_um,yp_um,pupilAmp); colorbar(handles.pupilAmp);
 xlabel(handles.pupilAmp,'x/um'),ylabel(handles.pupilAmp,'y/um');title(handles.pupilAmp,'Pupil amplitude');
 imagesc(handles.pupilPhase,xp_um,yp_um,pupilPha/2/pi); colorbar(handles.pupilPhase);
