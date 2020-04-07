@@ -349,8 +349,13 @@ polyg(num,1)=struct('xy',[],'tx',[],'phase',[]);
 backg.int=0;
 backg.phase=0;
 for j=1:num
-    xs=gds((s1(j)+5):2:(s2(j)-3))/10*cos(offsetAngle); % from A to nm
-    ys=gds((s1(j)+6):2:(s2(j)-3))/10;
+    if abs(cos(azimuth))==1
+        xs=gds((s1(j)+5):2:(s2(j)-3))/10*cos(offsetAngle); % from A to nm (tilt only works for x axis)
+        ys=gds((s1(j)+6):2:(s2(j)-3))/10;
+    else
+        xs=gds((s1(j)+5):2:(s2(j)-3))/10; % from A to nm (tilt only works for x axis)
+        ys=gds((s1(j)+6):2:(s2(j)-3))/10*cos(offsetAngle);
+    end
     polyg(j).xy =[xs';ys'];
     polyg(j).tx = 1;
     x0=mean(xs);
