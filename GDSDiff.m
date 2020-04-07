@@ -349,9 +349,9 @@ polyg(num,1)=struct('xy',[],'tx',[],'phase',[]);
 backg.int=0;
 backg.phase=0;
 for j=1:num
-    xs=gds((s1(j)+5):2:(s2(j)-3))/10; % from A to nm
+    xs=gds((s1(j)+5):2:(s2(j)-3))/10*cos(offsetAngle); % from A to nm
     ys=gds((s1(j)+6):2:(s2(j)-3))/10;
-    polyg(j).xy =[xs'*cos(offsetAngle);ys'];
+    polyg(j).xy =[xs';ys'];
     polyg(j).tx = 1;
     x0=mean(xs);
     y0=mean(ys);
@@ -1042,7 +1042,7 @@ end
 if get(handles.uicbRemoveDef,'Value')
     pupilPha = GDS.utils.DelDefocus(pupilPha);
 end
-RMS = std(pupilPha(mask==1));
+RMS = std(pupilPha(mask==1))/2/pi;
 set(handles.uitRMS,'String',num2str(RMS));
 imagesc(handles.pupilAmp,xp_um,yp_um,pupilAmp); colorbar(handles.pupilAmp);
 xlabel(handles.pupilAmp,'x/um'),ylabel(handles.pupilAmp,'y/um');title(handles.pupilAmp,'Pupil amplitude');
