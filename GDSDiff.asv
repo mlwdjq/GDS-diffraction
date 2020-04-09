@@ -54,7 +54,9 @@ function GDSDiff_OpeningFcn(hObject, eventdata, handles, varargin)
 
 % Choose default command line output for GDSDiff
 handles.output = hObject;
-
+try
+mpm addpath
+e
 % Update handles structure
 guidata(hObject, handles);
 
@@ -1135,7 +1137,10 @@ for k = 1:order
     basis(:, k+1) = zRTH(R,TH).*mask(:);
 end
 dZrn =pinv(basis(mask==1,:))*pupilPha(mask==1);
-figure(100),bar(0:order,dZrn),
+figure(100),bar(0:order,dZrn);
+xlabel('Zernike terms'),ylabel('Coefficients / Waves');
+% set(h,'LineWidth',2); 
+set(gca,'FontSize',14);
 
 
 
@@ -1158,4 +1163,33 @@ function uieNA_CreateFcn(hObject, eventdata, handles)
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
+end
+
+function Z = ZgenNM(n,m)
+R = RgenNM(n,abs(m));
+A = AgenNM(m);
+Z = @(r, phi) R(r).*A(phi);
+
+function [n,m] = j2nm(j)
+% j = j+1; % 0 is piston
+smct = 2;
+ct = 0;
+numInSmct = 3;
+while j > 0
+    smct = smct + 2;
+    j = j - numInSmct;
+    numInSmct = smct + 1;
+    ct = ct + 1;
+end
+n = 2*ct;
+m = 0;
+
+for k = 1:abs(j)
+    if isodd(k)
+        n = n - 1;
+        m = m + 1;
+    end
+end
+if isodd(abs(j))
+    m = -m;
 end

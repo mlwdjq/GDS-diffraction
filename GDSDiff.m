@@ -54,7 +54,11 @@ function GDSDiff_OpeningFcn(hObject, eventdata, handles, varargin)
 
 % Choose default command line output for GDSDiff
 handles.output = hObject;
-
+try
+    mpm addpath
+catch
+    addpath('mpm-packages\ryan_toolbox');
+end
 % Update handles structure
 guidata(hObject, handles);
 
@@ -399,8 +403,8 @@ x_um=propdis_nm*tan(asin(xc*wavl))/1000;
 y_um=propdis_nm*tan(asin(yc*wavl))/1000;
 dpx_um = wavl*propdis_nm/(xRight-xLeft)*1e-6;
 dpy_um = wavl*propdis_nm/(yRight-yLeft)*1e-6;
-xp_um = dpx_um*[-nrd:nrd];
-yp_um = dpy_um*[-nrd:nrd];
+xp_um = dpx_um*[-nrd+1:nrd-1];
+yp_um = dpy_um*[-nrd+1:nrd-1];
 imagesc(handles.outputField,x_um,y_um,fieldAmp); colorbar(handles.outputField);
 xlabel(handles.outputField,'x/um'),ylabel(handles.outputField,'y/um');title(handles.outputField,'Field amplitude');
 imagesc(handles.outputPhase,x_um,y_um,fieldPha/2/pi); colorbar(handles.outputPhase);
@@ -1162,3 +1166,81 @@ function uieNA_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+function Z = ZgenNM(n,m)
+R = RgenNM(n,abs(m));
+A = AgenNM(m);
+Z = @(r, phi) R(r).*A(phi);
+
+function [n,m] = j2nm(j)
+% j = j+1; % 0 is piston
+smct = 2;
+ct = 0;
+numInSmct = 3;
+while j > 0
+    smct = smct + 2;
+    j = j - numInSmct;
+    numInSmct = smct + 1;
+    ct = ct + 1;
+end
+n = 2*ct;
+m = 0;
+
+for k = 1:abs(j)
+    if isodd(k)
+        n = n - 1;
+        m = m + 1;
+    end
+end
+if isodd(abs(j))
+    m = -m;
+end
+
+function f = RgenNM(n,m)
+p = (n-m)/2;
+f = @(r) 0;
+
+for k = 0:p
+    coef = (-1)^k*nchoosek(n-k,k)*nchoosek(n-2*k,(n-m)/2-k);
+    ex = (n - 2*k);
+    f = @(r) f(r) + coef*r.^ex;
+end
+
+
+% Forms azimuthal function based on n,m
+function g = AgenNM(m)
+if m > 0
+    g = @(phi) cos(m*phi);
+elseif m < 0
+    g = @(phi) -sin(m*phi);
+else
+    g = @(phi) 1;
+end
+
+
+% Generates a coefficient vector
+function coefs = RgenNMCoef(n,m)
+p = (n-m)/2;
+
+coefs = zeros(1,p + 1);
+for k = 0:p
+    coef = (-1)^k*nchoosek(n-k,k)*nchoosek(n-2*k,(n-m)/2-k);
+    ex = (n - 2*k);
+    coefs(ex + 1) = coef;
+end
+
+% Generates a coefficient vector
+function angCoefs = AgenNMCoef(m)
+cosCoefs = zeros(1,abs(m));
+sinCoefs = zeros(1,abs(m));
+if m > 0
+    cosCoefs(m) = 1;
+elseif m < 0
+    sinCoefs(abs(m)) = -1;
+
+elseif m == 0
+    angCoefs = 1;
+    return
+end
+angCoefs = [cosCoefs; sinCoefs];
+angCoefs = [0;angCoefs(:)];
