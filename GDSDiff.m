@@ -22,7 +22,7 @@ function varargout = GDSDiff(varargin)
 
 % Edit the above text to modify the response to help GDSDiff
 
-% Last Modified by GUIDE v2.5 07-Apr-2020 16:27:47
+% Last Modified by GUIDE v2.5 08-Apr-2020 18:51:35
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -311,12 +311,24 @@ gds(end-1:end)=[];
 s1=find(gds==264192);% head of the polygon
 s2=find(gds==266496);% end of the polygon 
 % remove error datas
-temp = find(diff(s1)~=16);
-temp(1:2:end)=[];
-s1(temp)=[];
-temp = find(diff(s2)~=16);
-temp(1:2:end)=[];
-s2(temp)=[];
+ds1 = diff(s1);
+ds2 = diff(s2);
+for i = 1:length(ds1)
+    try
+        while ds1(i)>ds2(i)
+            ds2(i) = ds2(i)+ds2(i+1);
+            ds2(i+1) =[];
+            s2(i+1)  =[];
+        end
+        while ds1(i)<ds2(i)
+            ds1(i) = ds1(i)+ds1(i+1);
+            ds1(i+1) =[];
+            s1(i+1)  =[];
+        end
+    catch
+        break;
+    end
+end
 num=length(s1);
 fclose(outputFile);
 if num~=length(s2)
@@ -1041,17 +1053,19 @@ if get(handles.uicbUnwrapPhase,'Value')
     pupilPha = GDS.utils.UnwrapPhaseBySortingReliabilityWithMask(pupilPha,mask*255);
 end
 pupilPha(mask==0) = NaN;
+if get(handles.uicbRemoveSph,'Value')
+    propdis_um=str2double(get(handles.distance,'String'))*1e3;
+    NA = sin(atan((max(xp_um)-min(xp_um))/2/propdis_um));
+    pupilPha = GDS.utils.removeSphere(pupilPha,NA,mask);
+end
 if get(handles.uicbRemoveTilt,'Value')
     pupilPha = GDS.utils.DelTilt(pupilPha);
 end
 if get(handles.uicbRemoveDef,'Value')
     pupilPha = GDS.utils.DelDefocus(pupilPha);
 end
-if get(handles.uicbRemoveSph,'Value')
-    propdis_um=str2double(get(handles.distance,'String'))*1e3;
-    NA = sin(atan((max(xp_um)-min(xp_um))/2/propdis_um));
-    pupilPha = GDS.utils.removeSphere(pupilPha,NA,mask);
-end
+
+setappdata(gcf,'pupilPhaA',pupilPha);
 RMS = std(pupilPha(mask==1))/2/pi;
 set(handles.uitRMS,'String',num2str(RMS));
 imagesc(handles.pupilAmp,xp_um,yp_um,pupilAmp); colorbar(handles.pupilAmp);
@@ -1067,3 +1081,84 @@ function uicbRemoveSph_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of uicbRemoveSph
+
+
+
+function uieNZern_Callback(hObject, eventdata, handles)
+% hObject    handle to uieNZern (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of uieNZern as text
+%        str2double(get(hObject,'String')) returns contents of uieNZern as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function uieNZern_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to uieNZern (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in uibDecom.
+function uibDecom_Callback(hObject, eventdata, handles)
+% hObject    handle to uibDecom (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global mask
+pupilPha = getappdata(gcf,'pupilPhaA');
+if isempty(pupilPha)
+   pupilPha = getappdata(gcf,'pupilPha'); 
+end
+NA = str2double(get(handles.uieNA,'String'));
+xp_um = getappdata(gcf,'xp_um');
+yp_um = getappdata(gcf,'yp_um');
+propdis_um=str2double(get(handles.distance,'String'))*1e3;
+R_um = propdis_um*tan(asin(NA));
+[x,y] = meshgrid(xp_um,yp_um);
+[sx,sy] = size(pupilPha);
+order =str2double(get(handles.uieNZern,'String'));
+X=x/R_um;
+Y=y/R_um;
+basis = zeros(sx*sy, order + 1);
+basis(:,1) = mask(:);
+for k = 1:order
+    [n, m] = j2nm(k);
+    zRTH = ZgenNM(n,m);
+    [TH, R] = cart2pol(X(:), Y(:));
+    basis(:, k+1) = zRTH(R,TH).*mask(:);
+end
+dZrn =pinv(basis(mask==1,:))*pupilPha(mask==1);
+figure(100),bar(0:order,dZrn);
+xlabel('Zernike terms'),ylabel('Coefficients / Waves');
+% set(h,'LineWidth',2); 
+set(gca,'FontSize',14);
+
+
+
+function uieNA_Callback(hObject, eventdata, handles)
+% hObject    handle to uieNA (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of uieNA as text
+%        str2double(get(hObject,'String')) returns contents of uieNA as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function uieNA_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to uieNA (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
