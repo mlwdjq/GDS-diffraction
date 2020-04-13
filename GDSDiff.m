@@ -352,6 +352,8 @@ defocus_mm = str2double(get(handles.uieDefocus,'String'));
 sph = @(x,y)(2*pi/wavl*sign(defocus_mm)*sqrt(x.^2+y.^2+...
     (defocus_mm*1e6+x*tan(offsetAngle)*cos(azimuth)+y*tan(offsetAngle)*sin(azimuth)).^2)...% point source illumination
     -2*pi/wavl*tan(offsetAngle)*(x*cos(azimuth)+y*sin(azimuth))); % coordinates rotation phase
+sph2 = @(x,y)(2*pi/wavl*sqrt(x.^2+y.^2+propdis_nm.^2) ...% compensate phase
+    -2*pi/wavl*(propdis_nm+(x.^2+y.^2)/2/propdis_nm));
 xLeft= str2double(get(handles.xLeft,'String'));
 xRight= str2double(get(handles.xRight,'String'));
 yLeft= str2double(get(handles.yLeft,'String'));
@@ -377,7 +379,7 @@ for j=1:num
     x0=mean(xs);
     y0=mean(ys);
     polyg(j).phase=pi/(wavl)/(propdis_nm-...
-        (x0*cos(azimuth)+y0*sin(azimuth))*tan(offsetAngle))*(x0^2+y0^2)+sph(x0,y0);
+        (x0*cos(azimuth)+y0*sin(azimuth))*tan(offsetAngle))*(x0^2+y0^2)+sph(x0,y0)+sph2(x0,y0);
 %     figure(2),plot3(x0,y0,sph(x0,y0),'.'),hold on;
 end
  
