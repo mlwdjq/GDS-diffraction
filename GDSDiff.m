@@ -22,7 +22,7 @@ function varargout = GDSDiff(varargin)
 
 % Edit the above text to modify the response to help GDSDiff
 
-% Last Modified by GUIDE v2.5 08-Apr-2020 18:51:35
+% Last Modified by GUIDE v2.5 14-Apr-2020 23:15:46
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -347,20 +347,26 @@ offsetAngle = str2double(get(handles.uieAngle,'String'))*pi/180;
 azimuth = str2double(get(handles.uieAzimuth,'String'))*pi/180;
 propdis_nm=str2double(get(handles.distance,'String'))*1e6;
 defocus_mm = str2double(get(handles.uieDefocus,'String'));
-% x0_nm = defocus_mm*1e6*tan(offsetAngle)*cos(azimuth);
-% y0_nm = defocus_mm*1e6*tan(offsetAngle)*sin(azimuth);
-sph = @(x,y)(2*pi/wavl*sign(defocus_mm)*sqrt(x.^2+y.^2+...
-    (defocus_mm*1e6+x*tan(offsetAngle)*cos(azimuth)+y*tan(offsetAngle)*sin(azimuth)).^2)...% point source illumination
-    -2*pi/wavl*tan(offsetAngle)*(x*cos(azimuth)+y*sin(azimuth))); % coordinates rotation phase
-sph2 = @(x,y)(2*pi/wavl*sqrt(x.^2+y.^2+(propdis_nm-x*tan(offsetAngle)*cos(azimuth)-y*tan(offsetAngle)*sin(azimuth)).^2) ...% compensate phase
-    -2*pi/wavl*((propdis_nm-x*tan(offsetAngle)*cos(azimuth)-y*tan(offsetAngle)*sin(azimuth))+...
-    (x.^2+y.^2)/2/(propdis_nm-x*tan(offsetAngle)*cos(azimuth)-y*tan(offsetAngle)*sin(azimuth))));
+propMethod = get(handles.uipPropMethod,'Value');
+if propMethod ==1
+    sph = @(x,y)(2*pi/wavl*sign(defocus_mm)*sqrt(x.^2+y.^2+...
+        (defocus_mm*1e6+x*tan(offsetAngle)*cos(azimuth)+y*tan(offsetAngle)*sin(azimuth)).^2)+...% point source illumination
+        2*pi/wavl*sqrt(x.^2+y.^2+...
+        (propdis_nm-x*tan(offsetAngle)*cos(azimuth)-y*tan(offsetAngle)*sin(azimuth)).^2)); % compensate phase;
+else
+    sph = @(x,y)(2*pi/wavl*sign(defocus_mm)*sqrt(x.^2+y.^2+...
+        (defocus_mm*1e6+x*tan(offsetAngle)*cos(azimuth)+y*tan(offsetAngle)*sin(azimuth)).^2));% point source illumination
+end
 xLeft= str2double(get(handles.xLeft,'String'));
 xRight= str2double(get(handles.xRight,'String'));
 yLeft= str2double(get(handles.yLeft,'String'));
 yRight= str2double(get(handles.yRight,'String'));
 xc=linspace(sin(atan(xLeft/propdis_nm*1000)),sin(atan(xRight/propdis_nm*1000)),2*nrd-1)/wavl;
 yc=linspace(sin(atan(yLeft/propdis_nm*1000)),sin(atan(yRight/propdis_nm*1000)),2*nrd-1)/wavl;
+x_um=propdis_nm*tan(asin(xc*wavl))/1000;
+y_um=propdis_nm*tan(asin(yc*wavl))/1000;
+[x_nm,y_nm] = meshgrid(x_um*1000,y_um*1000);
+% [x_nm,y_nm] = meshgrid(linspace(xLeft,xRight,2*nrd-1)*1000,linspace(yLeft,yRight,2*nrd-1)*1000);
 [nyux,nyuy]=meshgrid(xc,yc); % frequency coordinates
 norm_flag = 1 ; % 1: Normalize the intensity, 0: Unnormalize the intensity
 %% create polygon structs
@@ -379,8 +385,7 @@ for j=1:num
     polyg(j).tx = 1;
     x0=mean(xs);
     y0=mean(ys);
-    polyg(j).phase=pi/(wavl)/(propdis_nm-...
-        (x0*cos(azimuth)+y0*sin(azimuth))*tan(offsetAngle))*(x0^2+y0^2)+sph(x0,y0)+sph2(x0,y0);
+    polyg(j).phase = sph(x0,y0);
 %     figure(2),plot3(x0,y0,sph(x0,y0),'.'),hold on;
 end
  
@@ -388,8 +393,13 @@ end
 polyg = cc_or_ccw(polyg) ;
 
 % -- Pupil intensity calculation
-% Computes the fourier transform of polygons in the plane specified by 
-diff_amp = polyProp(polyg, backg, nrd,nyux,nyuy,handles) ;
+% Computes the fourier transform of polygons in the plane specified by
+if propMethod ==1
+    diff_amp = polyProp(polyg, backg, nrd,nyux,nyuy,handles) ;
+else
+    diff_amp = sphereProp(polyg,x_nm,y_nm,propdis_nm,wavl,offsetAngle,azimuth);
+end
+
 pupil = ifftshift(ifft2(ifftshift(diff_amp)));
 if norm_flag>0
     diff_amp = diff_amp./max(abs(diff_amp(:))) ;
@@ -402,8 +412,7 @@ fieldAmp=abs(diff_amp);
 fieldPha=atan2(imag(diff_amp),real(diff_amp));
 pupilAmp = abs(pupil);
 pupilPha = atan2(imag(pupil),real(pupil));
-x_um=propdis_nm*tan(asin(xc*wavl))/1000;
-y_um=propdis_nm*tan(asin(yc*wavl))/1000;
+
 dpx_um = wavl*propdis_nm/(xRight-xLeft)*1e-6;
 dpy_um = wavl*propdis_nm/(yRight-yLeft)*1e-6;
 xp_um = dpx_um*[-nrd+1:nrd-1];
@@ -425,6 +434,19 @@ setappdata(gcf,'y_um',y_um);
 setappdata(gcf,'xp_um',xp_um);
 setappdata(gcf,'yp_um',yp_um);
 fprintf('Propagation took %0.1fs\n',toc);
+
+function p_amp = sphereProp(polyg,x_nm,y_nm,z_nm,lambda_nm,offsetAngle,azimuth) 
+p_amp =zeros(size(x_nm));
+num_poly = length(polyg) ;
+parfor i_poly = 1:num_poly
+     xy0 = mean(polyg(i_poly).xy,2);
+     x = xy0(1);
+     y = xy0(2);
+     z =x*tan(offsetAngle)*cos(azimuth)+y*tan(offsetAngle)*sin(azimuth);
+     R_nm = sqrt((x-x_nm).^2+(y-y_nm).^2 +(z-z_nm).^2);
+     p_amp = p_amp + polyg(i_poly).tx.*exp(1i*polyg(i_poly).phase+1i*2*pi/lambda_nm*R_nm)./R_nm.^2*(z_nm-z);
+end
+ 
 
 function p_amp = polyProp(polyg,backg,nrd,nyux,nyuy,handles) 
 % Function M-file polyFFT.m
@@ -1247,3 +1269,26 @@ elseif m == 0
 end
 angCoefs = [cosCoefs; sinCoefs];
 angCoefs = [0;angCoefs(:)];
+
+
+% --- Executes on selection change in uipPropMethod.
+function uipPropMethod_Callback(hObject, eventdata, handles)
+% hObject    handle to uipPropMethod (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns uipPropMethod contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from uipPropMethod
+
+
+% --- Executes during object creation, after setting all properties.
+function uipPropMethod_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to uipPropMethod (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
