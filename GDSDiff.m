@@ -397,7 +397,7 @@ polyg = cc_or_ccw(polyg) ;
 if propMethod ==1
     diff_amp = polyProp(polyg, backg, nrd,nyux,nyuy,handles) ;
 else
-    diff_amp = sphereProp(polyg,x_nm,y_nm,propdis_nm,wavl,offsetAngle,azimuth);
+    diff_amp = sphereProp(polyg,x_nm,y_nm,propdis_nm,wavl,offsetAngle,azimuth,handles);
 end
 
 pupil = ifftshift(ifft2(ifftshift(diff_amp)));
@@ -435,9 +435,10 @@ setappdata(gcf,'xp_um',xp_um);
 setappdata(gcf,'yp_um',yp_um);
 fprintf('Propagation took %0.1fs\n',toc);
 
-function p_amp = sphereProp(polyg,x_nm,y_nm,z_nm,lambda_nm,offsetAngle,azimuth) 
+function p_amp = sphereProp(polyg,x_nm,y_nm,z_nm,lambda_nm,offsetAngle,azimuth,handles) 
 p_amp =zeros(size(x_nm));
-num_poly = length(polyg) ;
+num_poly = length(polyg);
+runtimes=datenum(datestr(now,31));
 parfor i_poly = 1:num_poly
      xy0 = mean(polyg(i_poly).xy,2);
      x = xy0(1);
@@ -446,7 +447,9 @@ parfor i_poly = 1:num_poly
      R_nm = sqrt((x-x_nm).^2+(y-y_nm).^2 +(z-z_nm).^2);
      p_amp = p_amp + polyg(i_poly).tx.*exp(1i*polyg(i_poly).phase+1i*2*pi/lambda_nm*R_nm)./R_nm.^2*(z_nm-z);
 end
- 
+rt=datestr(datenum(datestr(now,31))-runtimes,13);
+set(handles.RT,'String',rt);
+
 
 function p_amp = polyProp(polyg,backg,nrd,nyux,nyuy,handles) 
 % Function M-file polyFFT.m
@@ -713,7 +716,8 @@ parfor i_poly = 1:num_poly
         drawnow;
     end
 end
-
+rt=datestr(datenum(datestr(now,31))-runtimes,13);
+set(handles.RT,'String',rt);
 
 
 % draw_t = linspace(0,2.*pi,101) ; 
