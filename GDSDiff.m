@@ -22,7 +22,7 @@ function varargout = GDSDiff(varargin)
 
 % Edit the above text to modify the response to help GDSDiff
 
-% Last Modified by GUIDE v2.5 14-Apr-2020 23:15:46
+% Last Modified by GUIDE v2.5 29-Jun-2020 16:19:43
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1296,3 +1296,10 @@ function uipPropMethod_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes when figure1 is resized.
+function figure1_SizeChangedFcn(hObject, eventdata, handles)
+% hObject    handle to figure1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
