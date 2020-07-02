@@ -29,11 +29,14 @@ p_amp =zeros(size(nyux));
 % The number of the polygons
 num_poly = length(polyg) ;
 xunit_vec = [1,0] ;
+parfor_progress(num_poly); % progress bar
+
 try
     parfor i_poly = 1:num_poly
-        if mod(i_poly,10)==1
-            fprintf('%d/%d propagation is done\n',i_poly,num_poly);
-        end
+        parfor_progress; % get progress
+%         if mod(i_poly,10)==1
+%             fprintf('%d/%d propagation is done\n',i_poly,num_poly);
+%         end
         dp_x = [polyg(i_poly).xy(1,1:end),polyg(i_poly).xy(1,1)] ;
         dp_y = [polyg(i_poly).xy(2,1:end),polyg(i_poly).xy(2,1)] ;
         
@@ -241,9 +244,10 @@ try
     end
 catch
     for i_poly = 1:num_poly
-        if mod(i_poly,10)==1
-            fprintf('%d/%d propagation is done\n',i_poly,num_poly);
-        end
+        parfor_progress; % get progress
+%         if mod(i_poly,10)==1
+%             fprintf('%d/%d propagation is done\n',i_poly,num_poly);
+%         end
         dp_x = [polyg(i_poly).xy(1,1:end),polyg(i_poly).xy(1,1)] ;
         dp_y = [polyg(i_poly).xy(2,1:end),polyg(i_poly).xy(2,1)] ;
         
@@ -450,6 +454,7 @@ catch
         end
     end
 end
+parfor_progress(0);
 warning on MATLAB:divideByZero
 
 % ------------------------------------------------------
