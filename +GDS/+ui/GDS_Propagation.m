@@ -260,15 +260,15 @@ classdef GDS_Propagation < mic.Base
             ds2 = diff(s2);
             for i = 1:length(ds1)
                 try
-                    while ds1(i)>ds2(i)
+                    while ds1(i+1)>ds2(i)
                         ds2(i) = ds2(i)+ds2(i+1);
                         ds2(i+1) =[];
                         s2(i+1)  =[];
                     end
-                    while ds1(i)<ds2(i)
-                        ds1(i) = ds1(i)+ds1(i+1);
-                        ds1(i+1) =[];
-                        s1(i+1)  =[];
+                    while ds1(i+1)<ds2(i)
+                        ds1(i+1) = ds1(i+1)+ds1(i+2);
+                        ds1(i+2) =[];
+                        s1(i+2)  =[];
                     end
                 catch
                     break;
