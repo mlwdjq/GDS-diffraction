@@ -2,6 +2,7 @@ addpath('../mpm');
 
 % mic library
 mpm clearpath
+addpath('../mpm');
 mpm addpath
 
 % Add this root directory to path
